@@ -1,0 +1,14 @@
+version: '3.7'
+
+# TODO => Read:
+# https://hackernoon.com/a-better-way-to-develop-node-js-with-docker-cd29d3a0093
+services:
+    frontend:
+        image: node:12
+        command: npm run start
+        working_dir: /mnt
+        volumes:
+            - ./:/mnt
+        ports:
+            - 3000:3000
+            - 5000:5000

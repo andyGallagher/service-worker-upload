@@ -1,0 +1,13 @@
+version: '2'
+services:
+  base:
+    image: node:12
+    ports:
+        - 3000:3000
+    working_dir: /mnt
+    volumes:
+        - ./:/mnt
+  install:
+    extends:
+      service: base
+    command: npm i
