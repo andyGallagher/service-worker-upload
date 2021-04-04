@@ -11,9 +11,10 @@ const s3 = new S3({
 	},
 });
 
+type UploadsMap = { [key: string]: number };
 export const App: React.FC = () => {
 	const uploadRef = useRef<HTMLInputElement>(null);
-	const [uploadsMap, setUploadsMap] = useState<{ [key: string]: number }>({});
+	const [uploadsMap, setUploadsMap] = useState<UploadsMap>({});
 	const uploadsEntries = Object.entries(uploadsMap);
 
 	const handleUpload = async () => {
