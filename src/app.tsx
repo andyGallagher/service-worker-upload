@@ -1,21 +1,23 @@
-import React, { useRef, useState } from 'react';
-import { S3 } from 'aws-sdk';
-import { ENV } from './util/env';
+import React, { useEffect, useRef, useState } from 'react';
 
-const s3 = new S3({
-	region: ENV.awsRegion,
-	accessKeyId: ENV.awsKey,
-	secretAccessKey: ENV.awsSecretKey,
-	httpOptions: {
-		timeout: 600000,
-	},
-});
+import { onUploadToS3 } from './observables/index';
+import { observableUpload } from './observables/observableUpload';
 
-type UploadsMap = { [key: string]: number };
+export type UploadsMap = { [key: string]: number | undefined };
 export const App: React.FC = () => {
 	const uploadRef = useRef<HTMLInputElement>(null);
 	const [uploadsMap, setUploadsMap] = useState<UploadsMap>({});
 	const uploadsEntries = Object.entries(uploadsMap);
+
+	useEffect(() => {
+		const subscription = onUploadToS3((upload) =>
+			setUploadsMap((uploadsMap) => ({
+				...uploadsMap,
+				...upload,
+			}))
+		);
+		return () => subscription.unsubscribe();
+	}, []);
 
 	const handleUpload = async () => {
 		if (uploadRef.current && uploadRef.current.files) {
@@ -24,50 +26,7 @@ export const App: React.FC = () => {
 			setUploadsMap(
 				files.reduce((acc, file) => ({ ...acc, [file.name]: 0 }), {})
 			);
-
-			try {
-				await Promise.all(
-					files.map(
-						async (file) =>
-							new Promise<S3.ManagedUpload.SendData>(
-								(res, rej) => {
-									const upload = s3.upload(
-										{
-											Key: file.name,
-											Bucket: ENV.awsBucket,
-											Body: file,
-											ContentType:
-												file.type ||
-												'application/octet-stream',
-										},
-										(err, data) => {
-											if (err) rej(err);
-											res(data);
-										}
-									);
-
-									upload.on(
-										'httpUploadProgress',
-										(progress) => {
-											setUploadsMap((uploadsMap) => ({
-												...uploadsMap,
-												[file.name]: Math.floor(
-													(progress.loaded /
-														progress.total) *
-														100
-												),
-											}));
-										}
-									);
-								}
-							)
-					)
-				);
-			} catch (e) {
-				console.warn('ffff');
-			} finally {
-				setUploadsMap({});
-			}
+			observableUpload(files);
 		}
 	};
 
